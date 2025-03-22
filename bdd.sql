@@ -1,3 +1,5 @@
+use  ad;
+
 CREATE TABLE User (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
     first_name VARCHAR(250),

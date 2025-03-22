@@ -1,0 +1,12 @@
+{
+  "name": "musync-usermanagement",
+  "version": "1.0.0",
+  "description": "- Contient le code **stable** en production.\r - Ne jamais pousser directement dessus.\r - Seules les **develop branche** et les **hotfixes** y sont mergées.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
