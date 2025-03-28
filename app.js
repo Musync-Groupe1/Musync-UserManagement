@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const profileRoutes = require('./routes/profile');
+const profileRoutes = require('./routes/ProfileController');
 
 app.use(express.json());
 app.use('/user', profileRoutes);
