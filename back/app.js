@@ -1,48 +1,81 @@
 const express = require('express');
-const cors = require('cors');
 const session = require('express-session');
-const { keycloak, memoryStore } = require('./keycloak');  // Assure-toi que Keycloak et memoryStore sont bien définis dans ton fichier keycloak.js
+const cors = require('cors');
+const { keycloak, memoryStore } = require('./keycloak');
 const profileController = require('./routes/ProfileController');
+
+const { startProducer, sendMessage } = require('../kafkaounet/producer.js');
+const { startConsumer } = require('../kafkaounet/consumer.js');
 
 const app = express();
 const port = 5000;
 
-// Configuration CORS pour autoriser les requêtes cross-origin venant de ton frontend
+// CORS simple
 app.use(cors({
-  origin: 'http://localhost:3000',  // L'URL de ton frontend (React)
-  credentials: true                // Autorise les cookies cross-origin
+  origin: 'http://localhost:3000',
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Middleware pour analyser les requêtes JSON
+// Headers généraux
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
 app.use(express.json());
 
-// Configuration de la session
+// Session express + store mémoire (nécessaire pour Keycloak)
 app.use(session({
   secret: 'secret',
   resave: false,
   saveUninitialized: true,
-  store: memoryStore,              // Utilisation du memoryStore pour la session
-  cookie: {
-    sameSite: 'lax',               // Permet les cookies cross-origin lors des redirections
-    secure: false                  // Utilise 'true' si tu es en HTTPS
-  }
+  store: memoryStore,
+  cookie: { sameSite: 'none', secure: false }, // adapte secure en prod
 }));
 
-// Initialisation du middleware Keycloak
+// Middleware Keycloak
 app.use(keycloak.middleware());
 
-// Définir les routes protégées par Keycloak sous '/api'
-app.use('/api', keycloak.protect(), profileController);  // Toutes les routes sous '/api' seront protégées
+// Middleware personnalisé pour renvoyer 401 si non authentifié
+function requireAuth(req, res, next) {
+  if (!req.kauth || !req.kauth.grant) {
+    return res.status(401).json({ message: 'Non authentifié' });
+  }
+  next();
+}
 
-// Callback pour Keycloak après l'authentification
+// Routes protégées avec Keycloak checkSso + requireAuth
+app.use('/api', keycloak.checkSso(), requireAuth, profileController);
+
+// Callback Keycloak (exemple)
 app.get('/auth/callback', (req, res) => {
-  console.log("✅ Callback Keycloak reçu, session : ", req.session);  // Affichage de la session après l'authentification
-
-  // Redirige vers le frontend une fois la connexion réussie
-  res.redirect('http://localhost:3000/profile');
+  console.log("🔁 Callback reçu avec code :", req.query.code);
+  res.redirect('http://localhost:5000/profile');
 });
 
-// Démarrage du serveur sur le port 5000
-app.listen(port, () => {
-  console.log(`✅ Backend lancé sur http://localhost:${port}`);
+// Fonction pour démarrer Kafka (producteur + consommateur)
+async function startKafka() {
+  try {
+    await startProducer();
+    console.log('Producteur Kafka démarré');
+
+    await startConsumer('mon-topic', async (data) => {
+      console.log('Message Kafka reçu:', data);
+      // Traite ici les messages reçus
+    });
+
+    console.log('Consommateur Kafka démarré et abonné au topic "mon-topic"');
+  } catch (error) {
+    console.error('Erreur lors du démarrage Kafka:', error);
+    process.exit(1);
+  }
+}
+
+// Démarre Kafka puis lance le serveur Express
+startKafka().then(() => {
+  app.listen(port, () => {
+    console.log(`✅ Backend lancé sur http://localhost:${port}`);
+  });
 });

@@ -4,7 +4,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import Profile from './Profile';
 
 function App() {
-  const loginUrl = "http://localhost:8181/realms/Musync/protocol/openid-connect/auth?client_id=Musync-client&response_type=code&scope=openid&redirect_uri=http://localhost:5000/auth/callback";
+  /* const loginUrl = "http://localhost:8181/realms/Musync/protocol/openid-connect/auth?client_id=Musync-client&response_type=code&scope=openid&redirect_uri=http://localhost:3000/profile"; */
+  const loginUrl = "http://localhost:8181/realms/Musync/protocol/openid-connect/auth?client_id=Musync-client&response_type=code&scope=openid&redirect_uri=http://localhost:3000/profile";
 
   return (
     <Router>
