@@ -3,7 +3,7 @@ const session = require('express-session');
 const cors = require('cors');
 const { keycloak, memoryStore } = require('./keycloak');
 const profileController = require('./routes/ProfileController');
-
+const userController = require('./routes/UserController');
 const { startProducer, sendMessage } = require('../kafkaounet/producer.js');
 const { startConsumer } = require('../kafkaounet/consumer.js');
 
@@ -48,7 +48,7 @@ function requireAuth(req, res, next) {
 
 // Routes protégées avec Keycloak checkSso + requireAuth
 app.use('/api', keycloak.checkSso(), requireAuth, profileController);
-
+app.use('/apii',userController)
 // Callback Keycloak (exemple)
 app.get('/auth/callback', (req, res) => {
   console.log("🔁 Callback reçu avec code :", req.query.code);
