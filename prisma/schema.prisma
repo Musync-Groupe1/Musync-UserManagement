@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+  
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model picture {
+  picture_id                               Int       @id @default(autoincrement())
+  link                                     String?   @db.VarChar(255)
+  name                                     String?   @db.VarChar(255)
+  posted_date                              DateTime? @db.Date
+  profile_profile_profile_pictureTopicture profile[] @relation("profile_profile_pictureTopicture")
+  profile_profile_picturesTopicture        profile[] @relation("profile_picturesTopicture")
+}
+
+model profile {
+  profile_id                               Int      @id @default(autoincrement())
+  user_id                                  String?  @db.VarChar(250)
+  profile_picture                          Int?
+  pictures                                 Int?
+  is_private                               Boolean?
+  is_certified                             Boolean?
+  description                              String?  @db.Text
+  accepted_age_gap                         Int?
+  accepted_distance                        Int?
+  targeted_gender                          String?  @db.VarChar(250)
+  favorite_musician                        String?  @db.VarChar(255)
+  favorite_music                           String?  @db.VarChar(255)
+  favorite_musical_style                   String?  @db.VarChar(255)
+  user                                     user?    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "profile_ibfk_1")
+  picture_profile_profile_pictureTopicture picture? @relation("profile_profile_pictureTopicture", fields: [profile_picture], references: [picture_id], onDelete: NoAction, onUpdate: NoAction, map: "profile_ibfk_2")
+  picture_profile_picturesTopicture        picture? @relation("profile_picturesTopicture", fields: [pictures], references: [picture_id], onDelete: NoAction, onUpdate: NoAction, map: "profile_ibfk_3")
+
+  @@index([pictures], map: "pictures")
+  @@index([profile_picture], map: "profile_picture")
+  @@index([user_id], map: "user_id")
+}
+
+model socialmedia {
+  social_media_id   Int               @id @default(autoincrement())
+  social_media_name String?           @db.VarChar(250)
+  usersocialmedia   usersocialmedia[]
+}
+
+model User {
+  user_id         String            @id @db.VarChar(250)
+  first_name      String?           @db.VarChar(250)
+  last_name       String?           @db.VarChar(250)
+  email           String?           @unique(map: "email") @db.VarChar(250)
+  birthdate       DateTime?         @db.Date
+  gender          user_gender?
+  profile         profile[]
+  usersocialmedia usersocialmedia[]
+}
+
+model usersocialmedia {
+  user_id         String      @db.VarChar(250)
+  social_media_id Int
+  token_account   String?     @db.VarChar(255)
+  is_private      Boolean?
+  user            user        @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "usersocialmedia_ibfk_1")
+  socialmedia     socialmedia @relation(fields: [social_media_id], references: [social_media_id], onDelete: NoAction, onUpdate: NoAction, map: "usersocialmedia_ibfk_2")
+
+  @@id([user_id, social_media_id])
+  @@index([social_media_id], map: "social_media_id")
+}
+
+enum user_gender {
+  Male
+  Female
+  Other
+}

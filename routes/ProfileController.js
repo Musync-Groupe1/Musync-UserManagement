@@ -1,9 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../bdd.js');
+const db = require('./bdd.js');
+const { keycloak } = require('../keycloak');
 
+// 🔒 Middleware global pour toutes les routes de ce fichier
+router.use(keycloak.protect());
+console.log('✅ ProfileController chargé');
+
+app.get('/callback', async (req, res) => {
+    res.send("Tu es bien connecté ✅ (plus tard on gèrera l'accès au frontend)");
+  });
 // Fonction récup de donnees de maniere polymorphe 
 const fetchData = async (res, userId, field,table) => {
+    console.log('🔥 Route certified atteinte');
     if (table === 'socialmedia'
     ){
         const [x] = await db.query(`SELECT ${field} FROM  ${table} WHERE social_media_id = ?`, [userId]);
@@ -105,6 +114,13 @@ router.post('/:id/:mediaId/:mediaToken/social-media', (req, res) => addField(res
 
 // Delete Routes
 router.delete('/:id/:mediaId/social-media', (req, res) => deleteField(res,req.params.id, req.params.mediaId,'usersocialmedia'));
+
+
+router.get('/:id/certified', (req, res) => {
+    console.log('🔥 Route certified atteinte');
+    fetchData(res, req.params.id, 'is_certified','Profile');
+  });
+  
 
 
 module.exports = router;
