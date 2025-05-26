@@ -1,36 +1,58 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../bdd.js');
+const db = require('./bdd.js');
+const { keycloak } = require('../keycloak');
 
+// 🔒 Middleware global pour toutes les routes de ce fichier
+router.use(keycloak.protect());
+console.log('✅ ProfileController chargé');
+
+app.get('/callback', async (req, res) => {
+    res.send("Tu es bien connecté ✅ (plus tard on gèrera l'accès au frontend)");
+  });
 // Fonction récup de donnees de maniere polymorphe 
 const fetchData = async (res, userId, field,table) => {
+    console.log('🔥 Route certified atteinte');
     if (table === 'socialmedia'
     ){
         const [x] = await db.query(`SELECT ${field} FROM  ${table} WHERE social_media_id = ?`, [userId]);
         res.json(x.length ? x[0][field] : null);
     } else {
         const [rows] = await db.query(`SELECT ${field} FROM  ${table} WHERE user_id = ?`, [userId]);
-        res.json(rows.length ? rows[0][field] : null);
+        res.json(rows.length ?  field == '*' ? rows :  rows[0][field] : null);
+        
     }
-};
 
+};
+const fetchSocialMedia = async (res, userId, socialMediaId, field,table) => {
+        const [x] = await db.query(`SELECT ${field} FROM  ${table} WHERE social_media_id = ? and user_id = ?`, [socialMediaId,userId]);
+        res.json(x.length ? x[0][field] : null);
+
+};
 // Fonction récup de donnees de maniere polymorphe 
 const updateField = async (res, userId, field, value, table) => {
     const [result] = await db.query(`UPDATE ${table} SET ${field} = ? WHERE user_id = ?`, [value, userId]);
     res.json({ message: result.affectedRows > 0 ? 'Profil mis à jour avec succès' : 'Erreur' });
 };
 
-
-// Fonction d ajout de donnees de maniere polymorphe 
-const addField = async (res, field, value, table) => {
-    const [result] = await db.query(`Insert ${table} SET ${field} = ? `, [value]);
+const updateSocialField = async (res, userId,socialMediaId, field, value, table) => {
+    const [result] = await db.query(`UPDATE ${table} SET ${field} = ? WHERE user_id = ? and social_media_id = ?`, [value, userId,socialMediaId]);
     res.json({ message: result.affectedRows > 0 ? 'Profil mis à jour avec succès' : 'Erreur' });
 };
 
 
-// Fonction suppr de donnees de maniere polymorphe 
-const deleteField = async (res, field, value, table) => {
-    const [result] = await db.query(`Delete from ${table} where ${field} = ? `, [value]);
+
+
+// Fonction d ajout de donnees  
+const addField = async (res, userId,socialMediaId, socialToken, table) => {
+    const [result] = await db.query(`Insert into ${table} values(?,?,?,0)`, [ userId, socialMediaId,socialToken]);
+    res.json({ message: result.affectedRows > 0 ? 'Profil mis à jour avec succès' : 'Erreur' });
+};
+
+
+// Fonction suppr de donnees  
+const deleteField = async (res, userId, socialMediaId, table) => {
+    const [result] = await db.query(`Delete from ${table} where user_id = ? and social_media_id = ? `, [userId,socialMediaId]);
     res.json({ message: result.affectedRows > 0 ? 'Profil mis à jour avec succès' : 'Erreur' });
 };
 
@@ -50,9 +72,18 @@ router.get('/:id/last-name', (req, res) => fetchData(res, req.params.id, 'last_n
 router.get('/:id/email', (req, res) => fetchData(res, req.params.id, 'email','User'));
 router.get('/:id/birthdate', (req, res) => fetchData(res, req.params.id, 'birthdate','User'));
 router.get('/:id/gender', (req, res) => fetchData(res, req.params.id, 'gender' ,'User'));
-router.get('/:id/social-media-name', (req, res) => fetchData(res, req.params.id, 'social_media_name' ,'socialmedia'));
-router.get('/:id/social-media-private', (req, res) => fetchData(res, req.params.id, 'is_private' ,'usersocialmedia'));
-router.get('/:id/token-account', (req, res) => fetchData(res, req.params.id, 'token_account' ,'usersocialmedia'));
+
+router.get('/:id/social-media', (req, res) => fetchData(res, req.params.id, '*' ,'usersocialmedia'));
+
+
+
+
+router.get('/:id/:mediaId/social-media-private', (req, res) => fetchSocialMedia(res, req.params.id, req.params.mediaId, 'is_private' ,'usersocialmedia'));
+router.get('/:id/:mediaId/token-account', (req, res) => fetchSocialMedia(res, req.params.id, req.params.mediaId, 'token_account' ,'usersocialmedia'));
+router.get('/:mediaId/social-media-name', (req, res) => fetchData(res,  req.params.mediaId, 'social_media_name' ,'socialmedia'));
+
+
+
 
 // PUT Routes
 router.put('/:id/private', (req, res) => updateField(res, req.params.id, 'is_private', req.body.is_private,'Profile'));
@@ -69,15 +100,27 @@ router.put('/:id/last-name', (req, res) => updateField(res, req.params.id,'last-
 router.put('/:id/email', (req, res) => updateField(res, req.params.id,'email', req.body.email,'User'));
 router.put('/:id/birthdate', (req, res) => updateField(res, req.params.id,'birthdate', req.body.birthdate,'User'));
 router.put('/:id/gender', (req, res) => updateField(res, req.params.id,'gender', req.body.gender,'User'));
-router.put('/:id/social-media-private', (req, res) => updateField(res, req.params.id,'is_private', req.body.is_private,'usersocialmedia'));
-router.put('/:id/social-media-token', (req, res) => updateField(res, req.params.id,'token_account', req.body.token_account,'usersocialmedia'));
+
+
+
+
+
+router.put('/:id/:mediaId/social-media-private', (req, res) => updateSocialField(res, req.params.id,req.params.mediaId,'is_private', req.body.is_private,'usersocialmedia'));
+router.put('/:id/:mediaId/social-media-token', (req, res) => updateSocialField(res, req.params.id,req.params.mediaId,'token_account', req.body.token_account,'usersocialmedia'));
 
 
 // POST Routes
-router.post('/:id/social-media', (req, res) => addField(res,'social_media_name', req.body.social_media_name,'socialmedia'));
+router.post('/:id/:mediaId/:mediaToken/social-media', (req, res) => addField(res, req.params.id,req.params.mediaId,req.params.mediaToken,'usersocialmedia'));
 
 // Delete Routes
-router.delete('/:id/social-media', (req, res) => deleteField(res,'social_media_name', req.body.social_media_name,'socialmedia'));
+router.delete('/:id/:mediaId/social-media', (req, res) => deleteField(res,req.params.id, req.params.mediaId,'usersocialmedia'));
+
+
+router.get('/:id/certified', (req, res) => {
+    console.log('🔥 Route certified atteinte');
+    fetchData(res, req.params.id, 'is_certified','Profile');
+  });
+  
 
 
 module.exports = router;
