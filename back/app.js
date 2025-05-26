@@ -47,8 +47,8 @@ function requireAuth(req, res, next) {
 }
 
 // Routes protégées avec Keycloak checkSso + requireAuth
-app.use('/api', keycloak.checkSso(), requireAuth, profileController);
-app.use('/apii',userController)
+app.use('/api/profile', keycloak.checkSso(), requireAuth, profileController);
+app.use('/api/user', userController)
 // Callback Keycloak (exemple)
 app.get('/auth/callback', (req, res) => {
   console.log("🔁 Callback reçu avec code :", req.query.code);
@@ -76,6 +76,6 @@ async function startKafka() {
 // Démarre Kafka puis lance le serveur Express
 startKafka().then(() => {
   app.listen(port, () => {
-    console.log(`✅ Backend lancé sur http://localhost:${port}`);
+    console.log(`Backend lancé sur http://localhost:${port}`);
   });
 });

@@ -1,8 +1,11 @@
 const { Kafka } = require('kafkajs');
+require('dotenv').config();
+
+const KAFKA_BROKERS= process.env.KAFKA_BROKERS || 'localhost:9092'
 
 const kafka = new Kafka({
   clientId: 'mon-microservice',        // Nom du client Kafka (unique)
-  brokers: ['localhost:9092'],         // Adresse(s) du broker Kafka
+  brokers: [KAFKA_BROKERS],         // Adresse(s) du broker Kafka
   // ssl, sasl etc. à configurer si nécessaire
 });
 

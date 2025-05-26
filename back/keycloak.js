@@ -9,9 +9,6 @@ const keycloak = new Keycloak({ store: memoryStore }, {
   "auth-server-url": "http://localhost:8181/",
   "ssl-required": "external",
   "resource": "Musync-client",
-  "credentials": {
-    "secret": "OYMFjyZc32krWfjMPjfvMPbpGc4YxAWK" // n'oublie pas de la récupérer depuis Keycloak > Clients > Credentials
-  },
   "confidential-port": 0
 });
 

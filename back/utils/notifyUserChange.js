@@ -4,14 +4,26 @@ const { sendMessage } = require('../../kafkaounet/producer.js');
 
 async function notifyUserChange(action, userId, explicitProfileId = null) {
   try {
-    // Fetch user + profile + social media
+    // Si c'est une suppression, on n'envoie que l'ID de l'utilisateur
+    if (action === 'deleted') {
+      const topic = `user.${action}`; // user.delete
+      const message = { user_id: userId };
+      await sendMessage(topic, message);
+      console.log(`[Kafka] Notification envoyée sur topic "${topic}": ${JSON.stringify(message)}`);
+      return;
+    }
+
+    // Sinon on récupère les détails usuels
     const user = await prisma.user.findUnique({ where: { user_id: userId } });
-    // Si suppression, on veut parfois transmettre le dernier profile_id connu
     const profile = explicitProfileId
       ? await prisma.profile.findUnique({ where: { profile_id: explicitProfileId } })
       : await prisma.profile.findFirst({ where: { user_id: userId } });
+    const socialMedia = await prisma.usersocialmedia.findMany({
+      where: { user_id: userId },
+      include: { socialmedia: true }
+    });
 
-    // On extrait les infos du profil si trouvé
+    // Aplatir le profil si on l'a
     const flatProfile = profile
       ? {
           profile_id: profile.profile_id,
@@ -29,12 +41,7 @@ async function notifyUserChange(action, userId, explicitProfileId = null) {
         }
       : {};
 
-    const socialMedia = await prisma.usersocialmedia.findMany({
-      where: { user_id: userId },
-      include: { socialmedia: true }
-    });
-
-    // Compose le message
+    // Compose le message complet
     const message = {
       user: user || null,
       ...flatProfile,
@@ -42,10 +49,7 @@ async function notifyUserChange(action, userId, explicitProfileId = null) {
       timestamp: new Date().toISOString(),
     };
 
-    // Topic dynamique selon l'action
-    const topic = `user.${action}`; // ex: user.create, user.update, user.delete
-
-    // Envoie le message toujours sous le même format
+    const topic = `user.${action}`; // ex: user.create, user.update
     await sendMessage(topic, message);
     console.log(`[Kafka] Notification envoyée sur topic "${topic}":\n${JSON.stringify(message, null, 2)}`);
 
